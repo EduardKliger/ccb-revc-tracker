@@ -81,6 +81,24 @@ body { font-family:'Segoe UI',sans-serif; background:#1e1e1e; color:#ccc; height
 /* Toast notification */
 .toast { position:fixed; top:50px; right:20px; background:#4CAF50; color:#fff; padding:10px 20px; border-radius:6px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; }
 .toast.show { opacity:1; }
+.toast.error { background:#d32f2f; }
+
+/* Setup modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10000; display:flex; align-items:center; justify-content:center; }
+.modal { background:#2d2d2d; border:1px solid #555; border-radius:8px; padding:24px; max-width:500px; width:90%; }
+.modal h2 { color:#fff; font-size:15px; margin-bottom:12px; }
+.modal p { font-size:11px; color:#aaa; margin-bottom:10px; line-height:1.5; }
+.modal input { width:100%; padding:8px; background:#1e1e1e; border:1px solid #555; color:#fff; border-radius:4px; font-family:Consolas; font-size:12px; margin-bottom:12px; }
+.modal .btn-row { display:flex; gap:8px; justify-content:flex-end; }
+.modal button { padding:6px 16px; border:none; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; }
+.modal .btn-save { background:#0078D4; color:#fff; }
+.modal .btn-cancel { background:#3c3c3c; color:#ccc; }
+.btn-setup { background:#3c3c3c; font-size:9px; padding:3px 8px; }
+.btn-setup:hover { background:#505050; }
+.btn-publish:disabled { opacity:0.5; cursor:wait; }
+
+/* Viewer mode banner */
+.viewer-banner { background:#0078D4; color:#fff; text-align:center; padding:4px; font-size:10px; font-weight:600; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -108,7 +126,8 @@ body { font-family:'Segoe UI',sans-serif; background:#1e1e1e; color:#ccc; height
   </div>
   <span class="info">HWD-12800 | GMSCPL-16798, SIR-2442</span>
   <div>
-    <button class="btn-publish" onclick="publishProgress()" title="Copy state to clipboard for publishing">Publish Progress</button>
+    <button class="btn-publish" id="btnPublish" onclick="publishProgress()">Publish Progress</button>
+    <button class="btn-default btn-setup" onclick="showSetup()">Setup</button>
     <button class="btn-danger" onclick="resetAll()">Reset All</button>
   </div>
 </div>
@@ -194,19 +213,26 @@ const PHASES = [
   ]},
 ];
 
-// State management
-let state = {};
-let publishedDate = null;
+// GitHub config
+const GITHUB_OWNER = "EduardKliger";
+const GITHUB_REPO = "ccb-revc-tracker";
+const STATE_PATH = "state.json";
+const TOKEN_KEY = "ccb_tracker_gh_token";
 const LOCAL_KEY = "ccb_tracker_local_state";
 
-// Load state: try server state.json first, then localStorage
-async function initState() {
-  // 1) Load localStorage (user's live edits)
-  try { state = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch(e) { state = {}; }
+let state = {};
+let publishedDate = null;
+let isEditorMode = false;
 
-  // 2) Try to load published state from state.json (what others see)
+// Load state: always fetch published state.json from GitHub Pages
+async function initState() {
+  // Check if user has a token (editor mode)
+  isEditorMode = !!localStorage.getItem(TOKEN_KEY);
+
+  // 1) Fetch the published state.json (works for everyone viewing the site)
+  let publishedState = {};
   try {
-    const resp = await fetch("state.json?t=" + Date.now());
+    const resp = await fetch(STATE_PATH + "?t=" + Date.now());
     if (resp.ok) {
       const published = await resp.json();
       if (published._publishedAt) {
@@ -214,16 +240,25 @@ async function initState() {
         document.getElementById("lastPublished").textContent =
           "Last published: " + new Date(publishedDate).toLocaleString();
       }
-      // If no local state, use published state
-      if (Object.keys(state).length === 0) {
-        delete published._publishedAt;
-        state = published;
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-      }
+      delete published._publishedAt;
+      publishedState = published;
     }
-  } catch(e) { /* state.json not available, use localStorage */ }
+  } catch(e) { /* state.json not available */ }
+
+  if (isEditorMode) {
+    // Editor: use localStorage (live edits), fall back to published
+    try { state = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch(e) { state = {}; }
+    if (Object.keys(state).length === 0) {
+      state = publishedState;
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    }
+  } else {
+    // Viewer: always show published state, read-only
+    state = publishedState;
+  }
 
   buildUI();
+  updateViewerMode();
 }
 
 function saveState() {
@@ -353,39 +388,145 @@ function resetAll() {
   }
 }
 
-// Publish: save state to clipboard + download state.json
-function publishProgress() {
-  const pub = Object.assign({}, state);
-  pub._publishedAt = new Date().toISOString();
-  const json = JSON.stringify(pub, null, 2);
-
-  // Copy to clipboard
-  navigator.clipboard.writeText(json).then(() => {
-    showToast("State copied to clipboard! Run publish.ps1 to push to GitHub.");
-  }).catch(() => {
-    // Fallback: download file
-    downloadFile("state.json", json);
-    showToast("state.json downloaded. Copy to site folder and run publish.ps1");
-  });
-
-  // Also trigger download as backup
-  downloadFile("state.json", json);
+// Viewer mode: disable checkboxes, hide editor buttons
+function updateViewerMode() {
+  const btn = document.getElementById("btnPublish");
+  if (!isEditorMode) {
+    // Add viewer banner
+    const bar = document.querySelector(".progress-bar-wrap");
+    if (!document.getElementById("viewerBanner")) {
+      const b = document.createElement("div");
+      b.id = "viewerBanner";
+      b.className = "viewer-banner";
+      b.textContent = "VIEW ONLY \u2014 Click Setup to enable editing";
+      bar.after(b);
+    }
+    btn.style.display = "none";
+    document.querySelectorAll(".task-row input[type=checkbox]").forEach(cb => cb.disabled = true);
+  } else {
+    btn.style.display = "";
+    const vb = document.getElementById("viewerBanner");
+    if (vb) vb.remove();
+  }
 }
 
-function downloadFile(name, content) {
-  const blob = new Blob([content], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(a.href);
+// Setup modal for GitHub token
+function showSetup() {
+  const existing = localStorage.getItem(TOKEN_KEY) || "";
+  const masked = existing ? existing.slice(0,8) + "..." + existing.slice(-4) : "";
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = '<div class="modal">'+
+    '<h2>GitHub Token Setup</h2>'+
+    '<p>To publish progress, you need a GitHub Personal Access Token with <b>repo</b> scope.<br>'+
+    '<a href="https://github.com/settings/tokens/new?scopes=repo&description=CCB+Tracker" target="_blank" style="color:#4EC9B0">Create token here</a> (select "repo" scope)</p>'+
+    '<p style="font-size:10px;color:#666">Token is stored only in YOUR browser\'s localStorage. Never sent anywhere except GitHub API.</p>'+
+    (masked ? '<p style="color:#4EC9B0;font-size:10px">Current: '+masked+'</p>' : '')+
+    '<input id="tokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx" value="">'+
+    '<div class="btn-row">'+
+    '<button class="btn-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>'+
+    (existing ? '<button class="btn-cancel" onclick="clearToken(this)">Remove Token</button>' : '')+
+    '<button class="btn-save" onclick="saveToken(this)">Save</button>'+
+    '</div></div>';
+  document.body.appendChild(overlay);
 }
 
-function showToast(msg) {
+function saveToken(btn) {
+  const input = document.getElementById("tokenInput");
+  const token = input.value.trim();
+  if (!token) { input.style.borderColor="#f44"; return; }
+  localStorage.setItem(TOKEN_KEY, token);
+  btn.closest(".modal-overlay").remove();
+  isEditorMode = true;
+  // Reload local state
+  try { const ls = JSON.parse(localStorage.getItem(LOCAL_KEY)); if(ls && Object.keys(ls).length) state = ls; } catch(e){}
+  buildUI();
+  updateViewerMode();
+  showToast("Token saved! You can now publish progress.");
+}
+
+function clearToken(btn) {
+  localStorage.removeItem(TOKEN_KEY);
+  btn.closest(".modal-overlay").remove();
+  isEditorMode = false;
+  updateViewerMode();
+  showToast("Token removed. View-only mode.");
+}
+
+// Publish progress directly to GitHub via API
+async function publishProgress() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) { showSetup(); return; }
+
+  const btn = document.getElementById("btnPublish");
+  btn.disabled = true;
+  btn.textContent = "Publishing...";
+
+  try {
+    // 1) Get current file SHA (needed for update)
+    const getResp = await fetch(
+      "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/contents/" + STATE_PATH,
+      { headers: { "Authorization": "Bearer " + token, "Accept": "application/vnd.github.v3+json" } }
+    );
+    if (!getResp.ok && getResp.status !== 404) {
+      throw new Error("GitHub API error: " + getResp.status + " " + (await getResp.text()));
+    }
+    let sha = null;
+    if (getResp.ok) {
+      const fileData = await getResp.json();
+      sha = fileData.sha;
+    }
+
+    // 2) Build state payload
+    const pub = Object.assign({}, state);
+    pub._publishedAt = new Date().toISOString();
+    const json = JSON.stringify(pub, null, 2);
+    const content = btoa(unescape(encodeURIComponent(json)));
+
+    // 3) Push update via GitHub Contents API
+    const body = {
+      message: "Progress update " + new Date().toLocaleString(),
+      content: content
+    };
+    if (sha) body.sha = sha;
+
+    const putResp = await fetch(
+      "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/contents/" + STATE_PATH,
+      {
+        method: "PUT",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      }
+    );
+
+    if (!putResp.ok) {
+      const err = await putResp.text();
+      throw new Error("Push failed (" + putResp.status + "): " + err);
+    }
+
+    publishedDate = pub._publishedAt;
+    document.getElementById("lastPublished").textContent =
+      "Last published: " + new Date(publishedDate).toLocaleString();
+    showToast("Published! Site updates in ~60 seconds.");
+
+  } catch(e) {
+    console.error("Publish error:", e);
+    showToast("Error: " + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Publish Progress";
+  }
+}
+
+function showToast(msg, isError) {
   const t = document.getElementById("toast");
   t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 4000);
+  t.className = "toast show" + (isError ? " error" : "");
+  setTimeout(() => { t.className = "toast"; }, 5000);
 }
 
 function buildUI() {
