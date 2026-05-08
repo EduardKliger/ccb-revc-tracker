@@ -58,6 +58,15 @@ body { font-family:'Segoe UI',sans-serif; background:#1e1e1e; color:#ccc; height
 .detail-instructions .label { font-size:9px; font-weight:700; color:#888; margin-bottom:4px; }
 .detail-instructions pre { font-family:Consolas; font-size:11px; color:#ddd; white-space:pre-wrap; line-height:1.5; }
 
+/* Notes */
+.notes-section { background:#2d2d2d; margin:0 12px 8px; padding:8px 12px; border-radius:4px; border-left:3px solid #FFB300; }
+.notes-section .label { font-size:9px; font-weight:700; color:#FFB300; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
+.notes-section .saved { font-size:8px; color:#888; font-weight:400; }
+.notes-section textarea { width:100%; min-height:70px; background:#1e1e1e; border:1px solid #444; color:#ddd; font-family:Consolas; font-size:11px; padding:6px 8px; border-radius:3px; resize:vertical; line-height:1.4; }
+.notes-section textarea:focus { outline:none; border-color:#FFB300; }
+.notes-section textarea:disabled { background:#252526; color:#888; cursor:not-allowed; }
+.notes-indicator { color:#FFB300; font-size:9px; margin-left:4px; }
+
 /* Image sections */
 .img-section-header { margin:8px 12px 0; padding:4px 10px; color:#fff; font-size:11px; font-weight:700; border-radius:3px 3px 0 0; }
 .img-section-header.sch { background:#0078D4; }
@@ -144,7 +153,7 @@ const PHASES = [
   {name:"PHASE 0: REVISION MANAGEMENT & SETUP", color:"#2196F3", tasks:[
     {id:"0.1",name:"Copy Rev B project -> Rev C",detail:"Copy 75809910_B/ -> 75809910_C/\nOpen in PADS VX.2.13\nVerify 18 sheets load",sch:[1],pcb:false,sr:[],pr:[]},
     {id:"0.2",name:"Update title blocks (all 18 sheets)",detail:"SCH: REV B->C, update date, add ECO#\nPCB: layout REV A2->A3",sch:[1],pcb:true,sr:[],pr:[]},
-    {id:"0.3",name:"Update revision history block",detail:"Sheet 1: add rev C row.\nChange summary (Wayne-converged plan):\n  - SWAP FETs to DMG2302UKQ (48182890) on connector-exposed gates only:\n      Q49 (BV bezel), Q19 (meter driver), Q47 (charger detect)\n      Q33 (BV signal) - pending Wayne confirmation\n      Q32 (BV PowerGood) - optional\n  - Add 11x SRV05-4 (48308994, SOT-23-6 4-line USB ESD, multi-source) for USB D+/D-\n  - R58: 1Mohm (47449791W) -> 10Mohm (1409011-02), 555 delay 110ms -> 1.1s\n  - DROPPED from earlier plan: signal TVS 48317491, series R 47464894, +24V TVS 48316391\n      Reason: DMG2302 has built-in gate ESD clamp (no need for external TVS on swapped FETs);\n              +24V rail bulk caps absorb ESD (Wayne); other FETs (Q14,Q15,Q24,Q46) gates not connector-exposed.\n  - ALL parts already in IGT library; no new IGT P/N requests\nPCB fab drawing: matching rev entry",sch:[1],pcb:true,sr:[],pr:[]},
+    {id:"0.3",name:"Update revision history block",detail:"Sheet 1: add rev C row.\nChange summary (Wayne-converged plan + Eduard ESD email addendum):\n  - SWAP FETs to DMG2302UKQ (48182890) on connector-exposed gates only:\n      Q49 (BV bezel), Q19 (meter driver), Q47 (charger detect)\n      Q33 (BV signal) - pending Wayne confirmation\n      Q32 (BV PowerGood) - optional\n  - Add 11x SRV05-4 (48308994, SOT-23-6 4-line USB ESD, multi-source) for USB D+/D-\n  - ADD 3x 49.9-ohm 0402 series gate-damping R (47464894) on meter channels:\n      Q14 (METER_RESET/), Q15 (meter signal), Q24 (meter/PGOOD_3V3) - Sheet 9, J19\n      Per ESD review email: these 3 channels lack adequate gate series R today.\n      Other 6 channels (Q19, Q32, Q33, Q46, Q47, Q49) already have adequate gate R.\n  - R58: 1Mohm (47449791W) -> 10Mohm (1409011-02), 555 delay 110ms -> 1.1s\n  - DROPPED from earlier plan: signal TVS 48317491, +24V TVS 48316391\n      Reason: DMG2302 has built-in gate ESD clamp (no need for external TVS on swapped FETs);\n              +24V rail bulk caps absorb ESD (Wayne).\n  - ALL parts already in IGT library; no new IGT P/N requests\nPCB fab drawing: matching rev entry",sch:[1],pcb:true,sr:[],pr:[]},
 
     {id:"0.4",name:"Library check: confirm all IGT P/Ns are usable in current project",detail:"All Rev C additions use existing released IGT P/Ns (verified against DxDatabook on USRNOPSQLD10):\n  - 48182890   XSTR,MOSFET,DMG2302UKQ,N-CH,20V,SOT-23 (FET swap, qty 3-5)\n  - 48308994   SUPPR,TVS DIODE ARRAY,SRV05-4,SOT-23-6,multi-source (USB ESD, qty 11)\n  - 1409011-02 RES,CHIP,10M,1/10W,5%,0603 (R58 pull-up, qty 1)\nOpen Databook in DxDesigner -> Transistor / Protection / Resistor tabs and confirm symbol+decal load cleanly into the Rev C project. No new-part requests, no Matrix submissions, no AVL turnaround needed.",sch:[],pcb:false,sr:[],pr:[]},
 
@@ -159,6 +168,12 @@ const PHASES = [
   ]},
   {name:"PHASE 1L (PCB): FET SWAP \u2014 LAYOUT VERIFICATION", color:"#2E7D32", tasks:[
     {id:"1.1L",name:"FET footprint verification (all swapped)",detail:"PCB: NO layout changes for FET swap - DMG2302UKQ uses identical SOT-23 footprint as 2N7002.\nVerify in PADS that the part-type ECO does NOT request a footprint change (it should be silent on PCB).\nConfirm IGT 48182890 decal in Databook = SOT-23 (same as 48113094 decal).\nNo silkscreen change needed (RefDes preserved).",sch:[],pcb:true,sr:[],pr:["Q49","Q19","Q47","Q33","Q32"]},
+  ]},
+  {name:"PHASE 1D (SCH+PCB): GATE-DAMPING SERIES R \u2014 METER CHANNELS", color:"#FFB300", tasks:[
+    {id:"1D.1",name:"Q14 (Sht 9) METER_RESET/ \u2014 add 49.9\u03A9 series R",detail:"SCH: Add 49.9-ohm 0402 series resistor (IGT P/N 47464894 RES,CHIP,49.9,1/16W,1%,0402) between J19 connector pin and Q14 gate.\nNet: METER_RESET/ (J19 -> new R -> Q14 gate).\nAssign next available RefDes (e.g. R700-series).\nPurpose: limits residual ESD current after the connector clamps; per ESD review email, Q14 currently has no/weak gate series R.\nQ14 itself stays as 2N7002 (gate not swapped this rev).",sch:[9],pcb:false,sr:["Q14"],pr:[]},
+    {id:"1D.2",name:"Q15 (Sht 9) meter signal \u2014 add 49.9\u03A9 series R",detail:"SCH: Add 49.9-ohm 0402 series resistor (47464894) between J19 connector pin and Q15 gate.\nAssign next available RefDes.\nPer ESD review email, Q15 currently has no/weak gate series R.\nQ15 stays as 2N7002.",sch:[9],pcb:false,sr:["Q15"],pr:[]},
+    {id:"1D.3",name:"Q24 (Sht 9) meter / PGOOD_3V3 \u2014 add 49.9\u03A9 series R",detail:"SCH: Add 49.9-ohm 0402 series resistor (47464894) between J19 connector pin and Q24 gate.\nAssign next available RefDes.\nPer ESD review email, Q24 currently has no/weak gate series R.\nQ24 stays as 2N7002.",sch:[9],pcb:false,sr:["Q24"],pr:[]},
+    {id:"1D.1L",name:"Q14 / Q15 / Q24 \u2014 PCB placement of new 0402 series R",detail:"PCB: Place each new 49.9-ohm 0402 close to the corresponding Q14/Q15/Q24 gate pad (within ~150 mil), inline on the trace coming from J19.\nThe series R should sit BETWEEN the connector trace and the FET gate (NOT after the FET gate).\nNo new RefDes range needed if PADS auto-assigns; otherwise reserve 3 consecutive R-numbers.\nNo other layout changes for this phase.",sch:[],pcb:true,sr:[],pr:["Q14","Q15","Q24"]},
   ]},
   {name:"PHASE 2 (SCH): USB ESD \u2014 11\u00D7 SRV05-4", color:"#FF9800", tasks:[
     {id:"2.1",name:"J8 Port A \u2014 Hub2/U8 \u2014 schematic",detail:"SCH Sht12: Add 48308994 (SRV05-4, SOT-23-6 4-line USB ESD) inline on D+/D-\n  D+ net: $17N12383 (J8.2 \u2192 U8.11)\n  D- net: $17N12366 (J8.3 \u2192 U8.12)\n  GND pin to UGND. Pin 2 (GND) to UGND. Pin 5 (Vbus) left NC \u2014 no Vbus rail clamp this rev (matches original plan).",sch:[12],pcb:false,sr:["J8","U8"],pr:[]},
@@ -193,15 +208,15 @@ const PHASES = [
     {id:"4.1",name:"Schematic DRC (all 18 sheets)",detail:"Run DRC.\nVerify: no unconnected pins, no net conflicts, no duplicate RefDes.",sch:[],pcb:false,sr:[],pr:[]},
     {id:"4.2",name:"Verify FET swap (selected channels)",detail:"Confirm part-type change from 48113094 (2N7002) to 48182890 (DMG2302UKQ) on:\n  Q49 (Sht 3, BV Bezel)\n  Q19 (Sht 9, Meter Driver)\n  Q47 (Sht 16, Wireless Charger Detect)\n  Q33 (Sht 2, BV Signal) [if Wayne confirmed]\n  Q32 (Sht 2, BV PowerGood) [if optional swap included]\nVerify Q14, Q15, Q24, Q46 still 2N7002 (gates not connector-exposed - no change needed).\nConfirm RefDes preserved, no footprint changes (same SOT-23).",sch:[2,3,9,16],pcb:false,sr:["Q32","Q33","Q49","Q19","Q47"],pr:[]},
     {id:"4.3",name:"Verify USB ESD connections (11 ports)",detail:"For each 48308994 (SRV05-4):\n  D+/D- inline on the two protected channels.\n  Pin 2 (GND) to UGND.\n  Pin 5 (Vbus) left NC \u2014 no Vbus rail clamp this rev (matches original plan).",sch:[11,12],pcb:false,sr:["U10","U8"],pr:[]},
-    {id:"4.4",name:"Verify NO signal TVS / series R / +24V TVS were added",detail:"Per Wayne-converged plan, the following are NOT in this rev:\n  - No 48317491 signal TVS on I/O channels (DMG2302 internal clamp covers swapped FETs)\n  - No 47464894 49.9-ohm series R on FET gates\n  - No 48316391 +24V rail TVS (Wayne: bulk caps cover ESD)\nIf any of these show up in the netlist diff, remove before release.",sch:[],pcb:false,sr:[],pr:[]},
-    {id:"4.5",name:"Generate netlist + diff vs Rev B",detail:"Export netlist.\nDiff old vs new should show ONLY:\n  - FET part-type swap: 48113094 -> 48182890 on Q49, Q19, Q47 (+ Q33 if confirmed, + Q32 if optional swap done)\n  - 11x 48308994 (SRV05-4 USB ESD) added on D+/D- pairs\n  - R58 value/PN: 1Mohm 47449791W -> 10Mohm 1409011-02\nNo new TVS on I/O signal channels. No series resistors added. No +24V rail TVS. No USB Vbus bypass caps.",sch:[],pcb:false,sr:[],pr:[]},
+    {id:"4.4",name:"Verify scope: signal TVS / series R / +24V TVS",detail:"Per current plan (Wayne-converged + ESD review email):\n  - NO 48317491 signal TVS on I/O channels (DMG2302 internal clamp covers swapped FETs).\n  - NO 48316391 +24V rail TVS (Wayne: bulk caps cover ESD).\n  - YES 3x 47464894 49.9-ohm 0402 gate series R on meter channels Q14, Q15, Q24 only.\n      No series R on Q19, Q32, Q33, Q46, Q47, Q49 (already have adequate gate R).\nIf the netlist diff shows anything OUTSIDE this scope, remove before release.",sch:[],pcb:false,sr:[],pr:[]},
+    {id:"4.5",name:"Generate netlist + diff vs Rev B",detail:"Export netlist.\nDiff old vs new should show ONLY:\n  - FET part-type swap: 48113094 -> 48182890 on Q49, Q19, Q47 (+ Q33 if confirmed, + Q32 if optional swap done)\n  - 11x 48308994 (SRV05-4 USB ESD) added on D+/D- pairs\n  - 3x 47464894 (49.9-ohm 0402) added inline on gates of Q14, Q15, Q24 (meter channels)\n  - R58 value/PN: 1Mohm 47449791W -> 10Mohm 1409011-02\nNo new TVS on I/O signal channels. No +24V rail TVS. No USB Vbus bypass caps.",sch:[],pcb:false,sr:[],pr:[]},
     {id:"4.6",name:"Forward-annotate to PCB",detail:"Import netlist ECO into layout.\nReview report:\n  - 11 new components added (11 USB SRV05-4)\n  - 3-5 part-type changes (FETs, no footprint impact)\n  - 1 part-number change (R58)\nAccept and place per Phase 1L / 2L rules.",sch:[],pcb:true,sr:[],pr:[]},
     {id:"4.7",name:"PCB DRC",detail:"Run full DRC.\nFix clearance violations.\nUpdate silkscreen for all new RefDes.",sch:[],pcb:true,sr:[],pr:[]},
     {id:"4.8",name:"USB diff impedance verification",detail:"Verify 90ohm differential on all USB D+/D- pairs.\nLength match within 150mil per pair (SRV05-4 inline is symmetric).",sch:[],pcb:true,sr:[],pr:[]},
     {id:"4.9",name:"ICT test point check (Sigmatron + DFI)",detail:"Verify no ICT test point access blocked by new SRV05-4 placements at USB connectors.\nFET swap is part-type only - no test point impact.\nConfirm fixture compatibility at both CMs.",sch:[],pcb:true,sr:[],pr:[]},
   ]},
   {name:"PHASE 5: OUTPUTS & REVISION MANAGEMENT", color:"#795548", tasks:[
-    {id:"5.1",name:"Update BOM",detail:"Part-type changes (existing RefDes, FET swap, all in IGT library):\n  - Q49, Q19, Q47 (+ Q33 if Wayne confirms, + Q32 if optional included): 48113094 (2N7002) -> 48182890 (DMG2302UKQ)\nAdd lines:\n  - 48308994   SRV05-4 USB ESD, SOT-23-6, multi-source        qty 11\n  - 1409011-02 RES,10M,1/10W,5%,0603                          qty 1   (R58 replaces 47449791W)\nDecrease:\n  - 47449791W  1Mohm 0603                                     -1     (R58 removed)\n  - 48113094   2N7002                                         -3 to -5 (depending on swap scope)\nNo new IGT P/N requests required.",sch:[],pcb:false,sr:[],pr:[]},
+    {id:"5.1",name:"Update BOM",detail:"Part-type changes (existing RefDes, FET swap, all in IGT library):\n  - Q49, Q19, Q47 (+ Q33 if Wayne confirms, + Q32 if optional included): 48113094 (2N7002) -> 48182890 (DMG2302UKQ)\nAdd lines:\n  - 48308994   SRV05-4 USB ESD, SOT-23-6, multi-source        qty 11\n  - 47464894   RES,CHIP,49.9,1/16W,1%,0402                    qty 3   (gate series R on Q14, Q15, Q24)\n  - 1409011-02 RES,10M,1/10W,5%,0603                          qty 1   (R58 replaces 47449791W)\nDecrease:\n  - 47449791W  1Mohm 0603                                     -1     (R58 removed)\n  - 48113094   2N7002                                         -3 to -5 (depending on swap scope)\nNo new IGT P/N requests required.",sch:[],pcb:false,sr:[],pr:[]},
     {id:"5.2",name:"Update assembly/fab drawings",detail:"Add new component locations to assembly drawing.\nUpdate fab drawing rev block.",sch:[],pcb:true,sr:[],pr:[]},
     {id:"5.3a",name:"Generate Gerbers (all layers)",detail:"Standard Gerber output for fabrication.",sch:[],pcb:true,sr:[],pr:[]},
     {id:"5.3b",name:"Generate NC drill files",detail:"Drill file output.",sch:[],pcb:false,sr:[],pr:[]},
@@ -213,11 +228,11 @@ const PHASES = [
     {id:"5.4d",name:"PLM: Rev bare board 75809900 B->C",detail:"Update PLM/Agile record.",sch:[],pcb:false,sr:[],pr:[]},
     {id:"5.4e",name:"PLM: Rev docs/test PNs if needed",detail:"75809960 docs, 75809970 test.\nRev only if impacted.",sch:[],pcb:false,sr:[],pr:[]},
     {id:"5.4f",name:"PLM: Confirm AVL for all PNs in use",detail:"All Rev C parts use existing approved IGT P/Ns:\n  48182890 (DMG2302UKQ), 48308994 (SRV05-4), 1409011-02 (10M 0603).\nNo new AVL submissions required.",sch:[],pcb:false,sr:[],pr:[]},
-    {id:"5.5",name:"Create ECO package",detail:"ECO doc with justification (Wayne-converged plan):\n  Why: ESD field failures (HWD-12800, GMSCPL-16798) on BV/meter/charger 2N7002 FETs + USB hubs damaged by peripherals.\n  Decision: SWAP only the connector-exposed FETs to DMG2302UKQ (built-in gate ESD clamp). VDS in those channels = +3.3V so 20V part is acceptable.\n  Add SRV05-4 (SOT-23-6, multi-source) on USB D+/D-.\n  R58 1M -> 10M for 1.1s PS_ON delay (Sierra no-sound ticket).\n  REJECTED: external signal TVS, series gate R, +24V rail TVS - not needed once FETs swapped + Wayne sign-off on bulk-cap coverage.\nAttach: netlist diff, BOM redline, marked-up SCH PDF.",sch:[],pcb:false,sr:[],pr:[]},
+    {id:"5.5",name:"Create ECO package",detail:"ECO doc with justification (Wayne-converged plan + ESD review email addendum):\n  Why: ESD field failures (HWD-12800, GMSCPL-16798) on BV/meter/charger 2N7002 FETs + USB hubs damaged by peripherals.\n  Decision:\n    - SWAP connector-exposed FETs to DMG2302UKQ (built-in gate ESD clamp). VDS in those channels = +3.3V, 20V part acceptable.\n    - ADD SRV05-4 (SOT-23-6, multi-source) on USB D+/D-.\n    - ADD 3x 49.9-ohm 0402 gate series R (47464894) on Q14/Q15/Q24 meter channels (no existing gate R).\n    - R58 1M -> 10M for 1.1s PS_ON delay (Sierra no-sound ticket).\n  REJECTED: external signal TVS (48317491), +24V rail TVS (48316391) - not needed once FETs swapped + Wayne sign-off on bulk-cap coverage.\nAttach: netlist diff, BOM redline, marked-up SCH PDF.",sch:[],pcb:false,sr:[],pr:[]},
     {id:"5.6",name:"Route ECO for approval",detail:"Send to Wayne Forsey, Jason Jia, Scott Jones for sign-off.",sch:[],pcb:false,sr:[],pr:[]},
   ]},
   {name:"PHASE 6: REVIEW & RELEASE", color:"#607D8B", tasks:[
-    {id:"6.1",name:"SCH review \u2014 Wayne (FET swap scope, 555 timing)",detail:"Walkthrough:\n  FET swap: Q49, Q19, Q47 firm. Q33 confirmed? Q32 included or skipped?\n  No external signal TVS, no series R, no +24V rail TVS (Wayne-confirmed bulk caps cover ESD).\n  555 R58 1Mohm -> 10Mohm (1409011-02) timing change to 1.1s.\n  DMG2302 VDS margin OK on +3.3V channels.",sch:[2,3,9,16],pcb:false,sr:["Q32","Q33","Q49","Q19","Q47","R58"],pr:[]},
+    {id:"6.1",name:"SCH review \u2014 Wayne (FET swap scope, 555 timing, gate damping R)",detail:"Walkthrough:\n  FET swap: Q49, Q19, Q47 firm. Q33 confirmed? Q32 included or skipped?\n  3x 49.9-ohm 0402 gate series R added on Q14/Q15/Q24 (meter channels, no existing gate R) per ESD review email.\n  No external signal TVS, no +24V rail TVS (Wayne-confirmed bulk caps cover ESD).\n  555 R58 1Mohm -> 10Mohm (1409011-02) timing change to 1.1s.\n  DMG2302 VDS margin OK on +3.3V channels.",sch:[2,3,9,16],pcb:false,sr:["Q32","Q33","Q49","Q19","Q47","Q14","Q15","Q24","R58"],pr:[]},
     {id:"6.2",name:"SCH review \u2014 Jason (USB ESD)",detail:"Walkthrough:\n  48308994 (SRV05-4) placement on 11 ports.\n  D+/D- inline connections, GND to UGND.\n  Pin 2 (GND) to UGND. Pin 5 (Vbus) left NC \u2014 no Vbus rail clamp this rev (matches original plan).",sch:[11,12],pcb:false,sr:["U10","U8","J11","J8"],pr:[]},
     {id:"6.3",name:"Layout review \u2014 Jerrod (ICT compat)",detail:"Verify test point access at Sigmatron + DFI.\n90ohm USB diff impedance maintained.\nTVS placement at connectors does not block fixture probes.",sch:[],pcb:true,sr:[],pr:[]},
     {id:"6.4",name:"Update JIRA HWD-12800",detail:"Attach Rev C files: schematic PDF, layout, BOM, netlist diff.\nDocument the ESD design decision (no FET swap, system-level protection).\nCross-ref GMSCPL-16798, SIR-2442.",sch:[],pcb:false,sr:[],pr:[]},
@@ -233,8 +248,10 @@ const TOKEN_KEY = "ccb_tracker_gh_token";
 const LOCAL_KEY = "ccb_tracker_local_state";
 
 let state = {};
+let notes = {};
 let publishedDate = null;
 let isEditorMode = false;
+let notesSaveTimer = null;
 
 // Load state: always fetch published state.json from GitHub Pages
 async function initState() {
@@ -243,6 +260,7 @@ async function initState() {
 
   // 1) Fetch the published state.json (works for everyone viewing the site)
   let publishedState = {};
+  let publishedNotes = {};
   try {
     const resp = await fetch(STATE_PATH + "?t=" + Date.now());
     if (resp.ok) {
@@ -252,7 +270,9 @@ async function initState() {
         document.getElementById("lastPublished").textContent =
           "Last published: " + new Date(publishedDate).toLocaleString();
       }
+      if (published._notes) { publishedNotes = published._notes; }
       delete published._publishedAt;
+      delete published._notes;
       publishedState = published;
     }
   } catch(e) { /* state.json not available */ }
@@ -260,13 +280,19 @@ async function initState() {
   if (isEditorMode) {
     // Editor: use localStorage (live edits), fall back to published
     try { state = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch(e) { state = {}; }
+    try { notes = JSON.parse(localStorage.getItem(LOCAL_KEY+"_notes")) || {}; } catch(e) { notes = {}; }
     if (Object.keys(state).length === 0) {
       state = publishedState;
       localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
     }
+    if (Object.keys(notes).length === 0 && Object.keys(publishedNotes).length > 0) {
+      notes = publishedNotes;
+      localStorage.setItem(LOCAL_KEY+"_notes", JSON.stringify(notes));
+    }
   } else {
     // Viewer: always show published state, read-only
     state = publishedState;
+    notes = publishedNotes;
   }
 
   buildUI();
@@ -275,6 +301,27 @@ async function initState() {
 
 function saveState() {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+}
+
+function saveNotes() {
+  localStorage.setItem(LOCAL_KEY+"_notes", JSON.stringify(notes));
+}
+
+function onNoteInput(taskId, ta) {
+  const val = ta.value;
+  if (val.trim() === "") { delete notes[taskId]; }
+  else { notes[taskId] = val; }
+  // Debounced save + status indicator
+  const status = document.getElementById("note-status-"+taskId);
+  if (status) status.textContent = "editing\u2026";
+  if (notesSaveTimer) clearTimeout(notesSaveTimer);
+  notesSaveTimer = setTimeout(() => {
+    saveNotes();
+    if (status) status.textContent = "saved locally \u2014 publish to share";
+    // Update sidebar indicator
+    const ind = document.getElementById("note-ind-"+taskId);
+    if (ind) ind.style.display = notes[taskId] ? "" : "none";
+  }, 400);
 }
 
 function updateProgress() {
@@ -325,6 +372,14 @@ function showDetail(task) {
   const rp = document.getElementById("rightPanel");
   let html = '<div class="detail-title">'+escHtml(task.id)+'  '+escHtml(task.name)+'</div>';
   html += '<div class="detail-instructions"><div class="label">INSTRUCTIONS</div><pre>'+escHtml(task.detail)+'</pre></div>';
+  // Notes section
+  const noteVal = notes[task.id] || "";
+  const ro = isEditorMode ? "" : " disabled";
+  const placeholder = isEditorMode ? "Add notes for this task\u2026 (auto-saved locally; click Publish to share)" : "No notes (view-only)";
+  html += '<div class="notes-section">'
+        + '<div class="label"><span>NOTES</span><span class="saved" id="note-status-'+task.id+'">'+(noteVal?"saved locally":"")+'</span></div>'
+        + '<textarea id="note-ta-'+task.id+'" placeholder="'+placeholder+'" oninput="onNoteInput(\''+task.id+'\', this)"'+ro+'>'+escHtml(noteVal)+'</textarea>'
+        + '</div>';
   task.sch.forEach(pg => {
     html += '<div class="img-section-header sch">SCHEMATIC \u2014 Sheet '+pg+'</div>';
     html += '<div class="img-container"><canvas id="sch-canvas-'+pg+'"></canvas></div>';
@@ -395,8 +450,8 @@ function expandAll() { PHASES.forEach((_,i)=>{ const f=document.getElementById("
 function collapseAll() { PHASES.forEach((_,i)=>{ const f=document.getElementById("phase-tasks-"+i),t=document.getElementById("phase-toggle-"+i); if(f){f.classList.add("collapsed");t.textContent="\u25B6";}}); }
 
 function resetAll() {
-  if(confirm("Clear ALL checkmarks?\nThis cannot be undone.")) {
-    state = {}; saveState(); buildUI();
+  if(confirm("Clear ALL checkmarks and notes?\nThis cannot be undone.")) {
+    state = {}; notes = {}; saveState(); saveNotes(); buildUI();
   }
 }
 
@@ -415,6 +470,7 @@ function updateViewerMode() {
     }
     btn.style.display = "none";
     document.querySelectorAll(".task-row input[type=checkbox]").forEach(cb => cb.disabled = true);
+    document.querySelectorAll(".notes-section textarea").forEach(ta => ta.disabled = true);
   } else {
     btn.style.display = "";
     const vb = document.getElementById("viewerBanner");
@@ -492,6 +548,7 @@ async function publishProgress() {
     // 2) Build state payload
     const pub = Object.assign({}, state);
     pub._publishedAt = new Date().toISOString();
+    pub._notes = notes;
     const json = JSON.stringify(pub, null, 2);
     const content = btoa(unescape(encodeURIComponent(json)));
 
@@ -559,6 +616,7 @@ function buildUI() {
       html += '<input type="checkbox" '+chk+' onclick="event.stopPropagation();onCheck(\''+task.id+'\',this)">';
       html += '<span class="task-id" style="color:'+phase.color+'">'+task.id+'</span>';
       html += '<span class="task-name'+dc+'" id="name-'+task.id+'">'+escHtml(task.name)+'</span>';
+      html += '<span class="notes-indicator" id="note-ind-'+task.id+'" title="Has notes" style="display:'+(notes[task.id]?"":"none")+'">\u270E</span>';
       html += '<span class="task-badges">';
       task.sch.forEach(pg=>{html+='<span class="badge badge-sch">S'+pg+'</span>';});
       if(task.pcb) html+='<span class="badge badge-pcb">PCB</span>';
