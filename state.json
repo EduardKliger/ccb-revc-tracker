@@ -7,7 +7,13 @@
   "1.4": true,
   "0.4": true,
   "1.5": true,
-  "_publishedAt": "2026-05-08T17:33:49.349Z",
+  "2.1": true,
+  "2.2": true,
+  "2.3": true,
+  "2.4": true,
+  "2.5": true,
+  "2.6": true,
+  "_publishedAt": "2026-05-08T18:45:47.354Z",
   "_notes": {
     "1.1": "no need adding resistor it to gate",
     "1.4": "did not swaped"
