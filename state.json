@@ -1,5 +1,10 @@
 {
   "0.1": true,
   "0.2": true,
-  "_publishedAt": "2026-05-01T15:50:02.674Z"
+  "1.1": true,
+  "1.2": true,
+  "_publishedAt": "2026-05-08T17:26:00.020Z",
+  "_notes": {
+    "1.1": "no need adding resistor it to gate"
+  }
 }
