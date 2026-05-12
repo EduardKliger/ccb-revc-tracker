@@ -18,9 +18,12 @@
   "2.9": true,
   "2.10": true,
   "2.11": true,
-  "_publishedAt": "2026-05-12T18:51:26.431Z",
+  "3.1": true,
+  "0.5": true,
+  "_publishedAt": "2026-05-12T20:51:42.195Z",
   "_notes": {
     "1.1": "no need adding resistor it to gate",
-    "1.4": "did not swaped"
+    "1.4": "did not swaped",
+    "2.1L": "wave soldering do not place near connector on the bottom"
   }
 }
