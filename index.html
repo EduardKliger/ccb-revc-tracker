@@ -273,16 +273,24 @@ async function initState() {
   } catch(e) { /* state.json not available */ }
 
   if (isEditorMode) {
-    // Editor: use localStorage (live edits), fall back to published
-    try { state = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch(e) { state = {}; }
-    try { notes = JSON.parse(localStorage.getItem(LOCAL_KEY+"_notes")) || {}; } catch(e) { notes = {}; }
-    if (Object.keys(state).length === 0) {
+    // Editor: compare timestamps — if published is newer than local edits, use published
+    let localState = {}; let localNotes = {}; let localUpdatedAt = null;
+    try { const ls = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; localUpdatedAt = ls._localUpdatedAt || null; delete ls._localUpdatedAt; localState = ls; } catch(e) {}
+    try { localNotes = JSON.parse(localStorage.getItem(LOCAL_KEY+"_notes")) || {}; } catch(e) {}
+
+    const publishedAt = publishedDate ? new Date(publishedDate).getTime() : 0;
+    const localAt = localUpdatedAt ? new Date(localUpdatedAt).getTime() : 0;
+
+    if (Object.keys(localState).length === 0 || publishedAt >= localAt) {
+      // Published is newer (or no local data) — use published as source of truth
       state = publishedState;
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-    }
-    if (Object.keys(notes).length === 0 && Object.keys(publishedNotes).length > 0) {
       notes = publishedNotes;
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
       localStorage.setItem(LOCAL_KEY+"_notes", JSON.stringify(notes));
+    } else {
+      // Local edits are newer than last publish — keep them
+      state = localState;
+      notes = localNotes;
     }
   } else {
     // Viewer: always show published state, read-only
@@ -295,7 +303,8 @@ async function initState() {
 }
 
 function saveState() {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+  const toSave = Object.assign({}, state, { _localUpdatedAt: new Date().toISOString() });
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(toSave));
 }
 
 function saveNotes() {
